@@ -1,27 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isOwner() {
-      return request.auth != null &&
-             request.auth.uid == 'YAZAR_UID_BURAYA';
+    function validDay(dayId) {
+      return dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
     }
 
-    // Ziyaretçiler günlerin varlığını ve içeriklerini görebilir.
-    // Yalnızca belirlediğiniz Firebase Auth kullanıcı UID'si yazabilir.
     match /days/{dayId} {
       allow read: if true;
-      allow create, update, delete: if isOwner();
+      allow create, update: if validDay(dayId)
+        && request.resource.data.keys().hasOnly(['updatedAt'])
+        && request.resource.data.keys().hasAll(['updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if true;
-        allow create: if isOwner()
-          && request.resource.data.keys().hasOnly(['text', 'createdAt', 'timeLabel'])
+        allow create: if validDay(dayId)
+          && request.resource.data.keys().hasOnly(['text', 'createdAt'])
+          && request.resource.data.keys().hasAll(['text', 'createdAt'])
           && request.resource.data.text is string
           && request.resource.data.text.size() >= 1
           && request.resource.data.text.size() <= 4000
-          && request.resource.data.timeLabel is string
-          && request.resource.data.createdAt is timestamp;
-        allow update, delete: if isOwner();
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
       }
     }
   }
