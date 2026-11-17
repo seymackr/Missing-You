@@ -1,14 +1,13 @@
-import { firebaseConfig, OWNER_UID } from './firebase-config.js';
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js';
-import { getFirestore, collection, doc, onSnapshot, getDocs, writeBatch, serverTimestamp, increment, query, orderBy } from 'https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
+import { getFirestore, collection, doc, onSnapshot, getDocs, writeBatch, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const $ = (s, base=document) => base.querySelector(s);
 const $$ = (s, base=document) => [...base.querySelectorAll(s)];
 const DAYS = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
 const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-const configured = !Object.values(firebaseConfig).some(v=> !v || /BURAYA|PROJE_ID/.test(String(v))) && !/BURAYA/.test(OWNER_UID);
-const state = { day: dateStart(new Date()), month: dateStart(new Date()), owner:false, db:null, auth:null, subs:[], dayMessages:new Map(), knownDays:new Map(), demo:!configured, toastTimeout:0 };
+const configured = !Object.values(firebaseConfig).some(v => !v || /BURAYA|PROJE_ID/.test(String(v)));
+const state = { day: dateStart(new Date()), month: dateStart(new Date()), db:null, subs:[], dayMessages:new Map(), knownDays:new Map(), demo:!configured, toastTimeout:0, lastSend:0 };
 const phones = $$('.phone');
 
 function dateStart(date) { return new Date(date.getFullYear(),date.getMonth(),date.getDate(),12); }
@@ -21,7 +20,7 @@ function clock() {return new Intl.DateTimeFormat('tr-TR',{hour:'2-digit',minute:
 function isCurrentDay(date) {return dateKey(date)===dateKey(new Date());}
 function toast(msg) {const el=$('#toast');el.textContent=msg;el.hidden=false;clearTimeout(state.toastTimeout);state.toastTimeout=setTimeout(()=>el.hidden=true,3900);}
 function status(msg){$('#statusLine').textContent=msg;}
-function showModal(id){$('#'+id).hidden=false; if(id==='searchModal')$('#searchInput').focus(); if(id==='loginModal')$('#loginEmail').focus();}
+function showModal(id){$('#'+id).hidden=false; if(id==='searchModal')$('#searchInput').focus();}
 function hideModal(id){$('#'+id).hidden=true;}
 function demoMessages(offset) {if(offset === 0) return [{id:'demo1',text:'Bugün kendimi daha iyi hissettim. ☀️',timeLabel:'10:21'},{id:'demo2',text:'Uzun zamandır ertelediğim işi sonunda yaptım! ✅',timeLabel:'16:47'},{id:'demo3',text:'Akşam da güzel bir film izledim. Kendime zaman ayırmak iyi geldi.',timeLabel:'22:30'}];if(offset===-1)return [{id:'demo4',text:'Bugün biraz yorgundum...',timeLabel:'20:14'},{id:'demo5',text:'Ama yine de fena bir gün değildi.',timeLabel:'22:03'}];return [];}
 function activeDate(offset) {return addDays(state.day,Number(offset));}
@@ -36,14 +35,11 @@ function renderPhone(phone) {
   const bubble=document.createElement('article');bubble.className='bubble';
   const txt=document.createElement('span');txt.className='bubble-text';txt.textContent=m.text;bubble.append(txt);
   const meta=document.createElement('div');meta.className='bubble-meta';
-  if(state.owner && !state.demo){const remove=document.createElement('button');remove.className='bubble-delete';remove.type='button';remove.title='Mesajı sil';remove.setAttribute('aria-label','Mesajı sil');remove.innerHTML='<svg class="ico"><use href="#i-trash" /></svg>';remove.addEventListener('click',()=>deleteMessage(key,m.id));meta.append(remove);}
-  const time=document.createElement('span');time.textContent=m.timeLabel || '—';meta.append(time);bubble.append(meta);body.append(bubble);
+  const time=document.createElement('span');time.textContent=m.createdAt?.toDate ? new Intl.DateTimeFormat('tr-TR',{hour:'2-digit',minute:'2-digit'}).format(m.createdAt.toDate()) : (m.timeLabel || '…');meta.append(time);bubble.append(meta);body.append(bubble);
  });
  $('.chat-empty',phone).hidden = messages.length>0;
- const composer=$('.composer',phone),readonly=$('.read-only-note',phone);
- composer.hidden=!state.owner || state.demo;
- readonly.hidden=state.owner && !state.demo;
- readonly.textContent=state.demo ? 'Bu mesajlar örnektir · Kurulum gerekli' : 'Bu güne ait mesajlar';
+ const composer=$('.composer',phone);
+ composer.hidden=state.demo;
  $('.message-input',phone).placeholder=isCurrentDay(day)?'Bugünün mesajını yaz...':'Bu güne bir mesaj yaz...';
  $('.chat-area',phone).scrollTop=$('.chat-area',phone).scrollHeight;
 }
@@ -83,27 +79,22 @@ function subscribeDays(){
  });
 }
 async function addMessage(date,field,button){
- if(!state.owner||state.demo){toast('Mesaj yazmak için yazar olarak giriş yapmalısın.');return;}
- const text=field.value.trim();if(!text)return;if(text.length>4000){toast('Mesaj en fazla 4000 karakter olabilir.');return;}
+ if(state.demo){toast('Önce Firebase kurulumunu tamamlamalısın.');return;}
+ const message=field.value.trim();
+ if(!message)return;
+ if(message.length>1000){toast('Mesaj en fazla 1000 karakter olabilir.');return;}
+ if(Date.now()-state.lastSend<4000){toast('Yeni mesaj için birkaç saniye bekle.');return;}
  button.disabled=true;
- try {
+ try{
   const key=dateKey(date),batch=writeBatch(state.db),msgRef=doc(collection(state.db,'days',key,'messages'));
-  batch.set(msgRef,{text,createdAt:serverTimestamp(),timeLabel:clock()});
-  batch.set(doc(state.db,'days',key),{count:increment(1),updatedAt:serverTimestamp()},{merge:true});
-  await batch.commit();field.value='';field.style.height='';toast('Mesajın kaydedildi.');
- }catch(err){console.error(err);toast('Kaydedilemedi. Yetkini ve internet bağlantını kontrol et.');}
+  batch.set(msgRef,{text:message,createdAt:serverTimestamp()});
+  batch.set(doc(state.db,'days',key),{updatedAt:serverTimestamp()},{merge:true});
+  await batch.commit();
+  field.value='';field.style.height='';state.lastSend=Date.now();toast('Mesaj yayınlandı. Herkes görebilir.');
+ }catch(err){console.error(err);toast('Mesaj gönderilemedi. Firestore Rules ve bağlantıyı kontrol et.');}
  finally{button.disabled=false;field.focus();}
 }
-async function deleteMessage(dayKey,id){
- if(!state.owner||!window.confirm('Bu mesajı kalıcı olarak silmek istiyor musun?'))return;
- try{const batch=writeBatch(state.db);batch.delete(doc(state.db,'days',dayKey,'messages',id));batch.set(doc(state.db,'days',dayKey),{count:increment(-1),updatedAt:serverTimestamp()},{merge:true});await batch.commit();toast('Mesaj silindi.');}catch(err){console.error(err);toast('Mesaj silinemedi.');}
-}
-async function login(email,password){if(state.demo)throw Error('Önce Firebase kurulumu gerekli.');await signInWithEmailAndPassword(state.auth,email,password);}
-function updateLoginLabel(){
- $('#loginLabel').textContent=state.owner?'Yazar olarak bağlı · Çıkış':'Yazar girişi';
- $('#loginOpen').title=state.owner?'Çıkış yap':'Yazar girişi';
-}
-async function fetchDaysIndex(){if(state.demo)return;try {const snap=await getDocs(collection(state.db,'days'));state.knownDays=new Map(snap.docs.map(d=>[d.id,Math.max(0,Number(d.data().count)||0)]));renderCalendar();} catch(err){console.error(err);}}
+async function fetchDaysIndex(){if(state.demo)return;try {const snap=await getDocs(collection(state.db,'days'));state.knownDays=new Map(snap.docs.map(d=>[d.id,1]));renderCalendar();} catch(err){console.error(err);}}
 function attachEvents(){
  $('#monthPrev').addEventListener('click',()=>changeMonth(-1));$('#monthNext').addEventListener('click',()=>changeMonth(1));
  $('#calendarPrev').addEventListener('click',()=>changeMonth(-1));$('#calendarNext').addEventListener('click',()=>changeMonth(1));
@@ -117,8 +108,6 @@ function attachEvents(){
  $$('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.hidden=true;}));
  $$('[data-close]').forEach(b=>b.addEventListener('click',()=>hideModal(b.dataset.close)));
  document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.overlay').forEach(el=>el.hidden=true);});
- $('#loginOpen').addEventListener('click',async()=>{if(state.owner){await signOut(state.auth);toast('Çıkış yapıldı.');}else showModal('loginModal');});
- $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const button=$('#loginSubmit');button.disabled=true;$('#loginFeedback').textContent='';try{await login($('#loginEmail').value.trim(),$('#loginPassword').value);$('#loginPassword').value='';hideModal('loginModal');if(state.owner){toast('Yazar girişi başarılı.');}else toast('Bu hesabın yazma yetkisi bulunmuyor.');}catch(err){console.error(err);$('#loginFeedback').textContent='Giriş yapılamadı. E-posta, şifre ve Firebase kurulumunu kontrol et.';}finally{button.disabled=false;}});
  phones.forEach(phone=>{
   $('.phone-back',phone).addEventListener('click',()=>changeDay(-1));
   const forward=$('.phone-forward',phone);if(forward)forward.addEventListener('click',()=>changeDay(1));
@@ -136,20 +125,20 @@ function attachEvents(){
    for(const day of days.docs){const msgs=await getDocs(collection(state.db,'days',day.id,'messages'));for(const m of msgs.docs){const d=m.data();if((d.text||'').toLocaleLowerCase('tr-TR').includes(term))found.push({day:day.id,...d});}}
    found.sort((a,b)=>b.day.localeCompare(a.day));results.replaceChildren();
    if(!found.length){results.textContent='Aradığın kelimeyi içeren mesaj bulunamadı.';return;}
-   found.slice(0,100).forEach(item=>{const b=document.createElement('button');b.type='button';b.className='search-result';const date=document.createElement('strong');date.textContent=prettyDate(parseDate(item.day))+' · '+(item.timeLabel||'');const content=document.createElement('span');content.textContent=item.text;b.append(date,content);b.addEventListener('click',()=>{hideModal('searchModal');selectDate(parseDate(item.day));});results.append(b);});
+   found.slice(0,100).forEach(item=>{const b=document.createElement('button');b.type='button';b.className='search-result';const date=document.createElement('strong');date.textContent=prettyDate(parseDate(item.day))+' · '+(item.createdAt?.toDate ? new Intl.DateTimeFormat('tr-TR',{hour:'2-digit',minute:'2-digit'}).format(item.createdAt.toDate()) : '');const content=document.createElement('span');content.textContent=item.text;b.append(date,content);b.addEventListener('click',()=>{hideModal('searchModal');selectDate(parseDate(item.day));});results.append(b);});
    if(found.length>100){const p=document.createElement('p');p.textContent=`İlk 100 sonuç gösteriliyor (toplam ${found.length}).`;results.append(p);}
   }catch(err){console.error(err);results.textContent='Arama başarısız. Bağlantıyı kontrol et.';}
  });
 }
 async function init(){
- attachEvents();state.month=new Date(state.day.getFullYear(),state.day.getMonth(),1,12);renderCalendar();renderAllPhones();updateLoginLabel();
+ attachEvents();state.month=new Date(state.day.getFullYear(),state.day.getMonth(),1,12);renderCalendar();renderAllPhones();
  if(state.demo){$('#setupBanner').hidden=false;status('Önizleme · Örnek mesajlar gösteriliyor; gerçek kayıt için Firebase kurulumu gerekli.');return;}
  try{
-  const app=initializeApp(firebaseConfig);state.db=getFirestore(app);state.auth=getAuth(app);
-  onAuthStateChanged(state.auth,user=>{state.owner=!!user && user.uid===OWNER_UID;updateLoginLabel();renderAllPhones();status(state.owner?'Yazar modu · Mesaj ekleyebilir ve silebilirsin.':'Herkese açık günlük · Mesajları herkes okuyabilir.');});
+  const app=initializeApp(firebaseConfig);state.db=getFirestore(app);
+  status('Herkese açık günlük · Mesajlar anlık paylaşılır. Giriş yapmadan yazabilirsin.');
   subscribeDays();await fetchDaysIndex();
   // Takvim noktalarını güncel tut: başka cihazda yeni mesaj eklenirse de görünür.
-  state.indexUnsub=onSnapshot(collection(state.db,'days'),snap=>{state.knownDays=new Map(snap.docs.map(d=>[d.id,Math.max(0,Number(d.data().count)||0)]));renderCalendar();},console.error);
+  state.indexUnsub=onSnapshot(collection(state.db,'days'),snap=>{state.knownDays=new Map(snap.docs.map(d=>[d.id,1]));renderCalendar();},console.error);
  }catch(err){console.error(err);status('Firebase bağlantısı kurulamadı. Firebase ayarlarını kontrol et.');}
 }
 init();
