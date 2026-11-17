@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null &&
+             request.auth.uid == 'YAZAR_UID_BURAYA';
+    }
+
+    // Ziyaretçiler günlerin varlığını ve içeriklerini görebilir.
+    // Yalnızca belirlediğiniz Firebase Auth kullanıcı UID'si yazabilir.
+    match /days/{dayId} {
+      allow read: if true;
+      allow create, update, delete: if isOwner();
+
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if isOwner()
+          && request.resource.data.keys().hasOnly(['text', 'createdAt', 'timeLabel'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 4000
+          && request.resource.data.timeLabel is string
+          && request.resource.data.createdAt is timestamp;
+        allow update, delete: if isOwner();
+      }
+    }
+  }
+}

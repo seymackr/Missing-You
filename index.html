@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#50362f" />
+  <meta name="description" content="Günlerin mesajlara dönüştüğü dijital günlük." />
+  <title>Günlük • Gün gün mesajlar</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon-source" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 3h4M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+  </svg>
+
+  <div class="shell">
+    <aside class="sidebar" aria-label="Ana menü">
+      <div class="sidebar-spacer" aria-hidden="true"><span class="brand-line"></span><span class="brand-dot"></span></div>
+      <nav class="navigation" aria-label="Sayfalar">
+        <button id="navDiary" class="nav-item active" type="button"><svg class="ico"><use href="#i-home" /></svg><span>Günlük</span></button>
+        <button id="navCalendar" class="nav-item" type="button"><svg class="ico"><use href="#i-calendar" /></svg><span>Takvim</span></button>
+        <button id="navSearch" class="nav-item" type="button"><svg class="ico"><use href="#i-search" /></svg><span>Arama</span></button>
+      </nav>
+      <section class="mini-calendar" id="miniCalendar" aria-label="Gün seçimi">
+        <div class="mini-month-head">
+          <button class="icon-button small" id="calendarPrev" aria-label="Önceki ay" type="button"><svg class="ico"><use href="#i-chevron-left" /></svg></button>
+          <span id="miniMonthLabel"></span>
+          <button class="icon-button small" id="calendarNext" aria-label="Sonraki ay" type="button"><svg class="ico"><use href="#i-chevron-right" /></svg></button>
+        </div>
+        <div class="weekday-row"><span>Pt</span><span>Sa</span><span>Ça</span><span>Pe</span><span>Cu</span><span>Ct</span><span>Pz</span></div>
+        <div id="calendarDays" class="calendar-days"></div>
+      </section>
+      <div class="side-bottom">
+        <p class="tiny-quote">Bazı günler, birkaç cümle kadar.</p>
+        <button class="access-button" type="button" id="loginOpen"><svg class="ico"><use href="#i-lock" /></svg><span id="loginLabel">Yazar girişi</span></button>
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <div class="scene-leaf leaf-one" aria-hidden="true"></div>
+      <div class="scene-leaf leaf-two" aria-hidden="true"></div>
+      <div class="sky-spark spark-one" aria-hidden="true"></div>
+      <div class="sky-spark spark-two" aria-hidden="true"></div>
+      <header class="topbar">
+        <button type="button" class="round-button" id="monthPrev" aria-label="Önceki ay"><svg class="ico"><use href="#i-chevron-left" /></svg></button>
+        <button type="button" class="month-pill" id="monthPickerButton"><svg class="ico"><use href="#i-calendar" /></svg><span id="topMonthLabel"></span></button>
+        <input type="date" id="datePicker" aria-label="Tarih seç" class="hidden-date-input" />
+        <button type="button" class="round-button" id="monthNext" aria-label="Sonraki ay"><svg class="ico"><use href="#i-chevron-right" /></svg></button>
+      </header>
+
+      <section class="stage" aria-label="Günlük mesajları">
+        <div class="scene-skyline" aria-hidden="true"></div>
+        <div class="phones" id="phones">
+          <section class="phone phone-left" data-offset="-1" aria-label="Önceki gün">
+            <div class="phone-frame">
+              <div class="notch" aria-hidden="true"></div>
+              <div class="phone-status"><span>09:41</span><span class="status-signals" aria-hidden="true">▂▄▆ ▰</span></div>
+              <header class="phone-header"><button class="phone-back" type="button" aria-label="Önceki gün"><svg class="ico"><use href="#i-chevron-left" /></svg></button><div class="phone-date"><strong></strong><small></small></div><span class="header-mark" aria-hidden="true">•••</span></header>
+              <div class="chat-area"><div class="chat-messages"></div><p class="chat-empty" hidden>Henüz bir mesaj yok...<span>Bu gün henüz yazılmamış.</span></p></div>
+              <form class="composer" hidden><textarea class="message-input" rows="1" maxlength="4000" placeholder="Bu güne bir mesaj yaz..." aria-label="Mesaj yaz"></textarea><button class="send-button" type="submit" aria-label="Mesaj gönder"><svg class="ico"><use href="#i-send" /></svg></button></form>
+              <div class="read-only-note" hidden>Bu güne ait mesajlar</div>
+            </div>
+          </section>
+          <section class="phone phone-center" data-offset="0" aria-label="Seçili gün">
+            <div class="phone-frame">
+              <div class="notch" aria-hidden="true"></div>
+              <div class="phone-status"><span>09:41</span><span class="status-signals" aria-hidden="true">▂▄▆ ▰</span></div>
+              <header class="phone-header"><button class="phone-back" type="button" aria-label="Önceki gün"><svg class="ico"><use href="#i-chevron-left" /></svg></button><div class="phone-date"><strong></strong><small></small></div><button class="phone-forward" type="button" aria-label="Sonraki gün"><svg class="ico"><use href="#i-chevron-right" /></svg></button></header>
+              <div class="chat-area"><div class="chat-messages"></div><p class="chat-empty" hidden>Henüz bir mesaj yok...<span>Bugününü yazmaya başla.</span></p></div>
+              <form class="composer" hidden><textarea class="message-input" rows="1" maxlength="4000" placeholder="Bugünün mesajını yaz..." aria-label="Mesaj yaz"></textarea><button class="send-button" type="submit" aria-label="Mesaj gönder"><svg class="ico"><use href="#i-send" /></svg></button></form>
+              <div class="read-only-note" hidden>Bu güne ait mesajlar</div>
+            </div>
+          </section>
+          <section class="phone phone-right" data-offset="1" aria-label="Sonraki gün">
+            <div class="phone-frame">
+              <div class="notch" aria-hidden="true"></div>
+              <div class="phone-status"><span>09:41</span><span class="status-signals" aria-hidden="true">▂▄▆ ▰</span></div>
+              <header class="phone-header"><button class="phone-back" type="button" aria-label="Önceki gün"><svg class="ico"><use href="#i-chevron-left" /></svg></button><div class="phone-date"><strong></strong><small></small></div><span class="header-mark" aria-hidden="true">•••</span></header>
+              <div class="chat-area"><div class="chat-messages"></div><p class="chat-empty" hidden>Henüz bir mesaj yok...<span>Bu gün henüz yazılmamış.</span></p></div>
+              <form class="composer" hidden><textarea class="message-input" rows="1" maxlength="4000" placeholder="Bu güne bir mesaj yaz..." aria-label="Mesaj yaz"></textarea><button class="send-button" type="submit" aria-label="Mesaj gönder"><svg class="ico"><use href="#i-send" /></svg></button></form>
+              <div class="read-only-note" hidden>Bu güne ait mesajlar</div>
+            </div>
+          </section>
+        </div>
+      </section>
+      <div class="bottom-controls"><button id="dayPrev" class="step-button" type="button" aria-label="Önceki gün"><svg class="ico"><use href="#i-chevron-left" /></svg></button><span class="dot muted"></span><span class="dot selected"></span><span class="dot muted"></span><button id="dayNext" class="step-button" type="button" aria-label="Sonraki gün"><svg class="ico"><use href="#i-chevron-right" /></svg></button></div>
+      <p id="statusLine" class="status-line" role="status" aria-live="polite">Bağlantı hazırlanıyor...</p>
+    </main>
+  </div>
+
+  <div class="overlay" id="loginModal" hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <button class="close-button" type="button" data-close="loginModal" aria-label="Kapat"><svg class="ico"><use href="#i-x" /></svg></button>
+      <div class="dialog-icon"><svg class="ico"><use href="#i-lock" /></svg></div>
+      <h2 id="loginTitle">Yazar girişi</h2>
+      <p>Yalnızca günlük sahibi mesaj ekleyebilir ve silebilir. Ziyaretçiler mesajları giriş yapmadan okuyabilir.</p>
+      <form id="loginForm">
+        <label for="loginEmail">E-posta</label><input id="loginEmail" type="email" required autocomplete="username" placeholder="E-posta adresin" />
+        <label for="loginPassword">Şifre</label><input id="loginPassword" type="password" required autocomplete="current-password" placeholder="Şifren" />
+        <button class="primary-action" type="submit" id="loginSubmit">Giriş yap</button>
+      </form>
+      <p class="dialog-feedback" id="loginFeedback" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <div class="overlay" id="searchModal" hidden>
+    <section class="dialog search-dialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+      <button class="close-button" type="button" data-close="searchModal" aria-label="Kapat"><svg class="ico"><use href="#i-x" /></svg></button>
+      <h2 id="searchTitle">Mesajlarda ara</h2>
+      <p>Yazdığın bir kelimeyi veya cümleyi bul.</p>
+      <form id="searchForm" class="search-form"><input id="searchInput" type="search" placeholder="Bir kelime yaz..." required minlength="2" /><button type="submit" class="primary-action">Ara</button></form>
+      <div id="searchResults" class="search-results" aria-live="polite"><p class="search-hint">Aramaya başlamak için en az iki harf yaz.</p></div>
+    </section>
+  </div>
+
+  <div class="overlay" id="calendarModal" hidden>
+    <section class="dialog calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="calendarTitle">
+      <button class="close-button" type="button" data-close="calendarModal" aria-label="Kapat"><svg class="ico"><use href="#i-x" /></svg></button>
+      <h2 id="calendarTitle">Bir gün seç</h2>
+      <p>Takvimden dilediğin tarihe gidebilirsin.</p>
+      <input type="date" id="largeDatePicker" aria-label="Görüntülenecek gün" />
+      <button type="button" id="goToDate" class="primary-action">O günü aç</button>
+    </section>
+  </div>
+  <div class="setup-banner" id="setupBanner" hidden><strong>Önizleme modu</strong> — Gerçek mesajların herkeste görünmesi için README içindeki Firebase kurulumunu tamamla.</div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
