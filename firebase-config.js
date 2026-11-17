@@ -1,15 +1,10 @@
-// Firebase Console > Proje ayarları > Uygulamalarınız > Web uygulaması
-// içindeki firebaseConfig değerlerini BURAYA yapıştırın.
-// Bu bilgiler web uygulamalarında herkese açıktır; GÜVENLİĞİ Firestore kuralları sağlar.
+// Firebase web uygulaması bağlantısı: missing-truly.
+// Bu değerler istemci tarafında görünür; erişim izinleri Firestore Rules ile yönetilir.
 export const firebaseConfig = {
-  apiKey: "FIREBASE_API_KEY_BURAYA",
-  authDomain: "PROJE_ID.firebaseapp.com",
-  projectId: "PROJE_ID_BURAYA",
-  storageBucket: "PROJE_ID.firebasestorage.app",
-  messagingSenderId: "MESAJLASMA_ID_BURAYA",
-  appId: "APP_ID_BURAYA"
+  apiKey: "AIzaSyC9VjymFpFTgFvsV1FPH4ykW4CeAgCoyCs",
+  authDomain: "missing-truly.firebaseapp.com",
+  projectId: "missing-truly",
+  storageBucket: "missing-truly.firebasestorage.app",
+  messagingSenderId: "357711583117",
+  appId: "1:357711583117:web:868696754fd3c5a4834fc4"
 };
-
-// Firebase Console > Authentication > Users > kendi hesabınızın User UID alanı.
-// Aynı UID'yi firestore.rules dosyasına da yazmanız gerekir.
-export const OWNER_UID = "YAZAR_UID_BURAYA";
